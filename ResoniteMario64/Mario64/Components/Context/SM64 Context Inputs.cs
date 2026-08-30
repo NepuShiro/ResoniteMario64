@@ -204,6 +204,7 @@ public sealed class SM64ContextInputs : IDisposable
     // }
 
     [HarmonyPatch(typeof(InteractionHandler), nameof(InteractionHandler.BeforeInputUpdate))]
+    [HarmonyAfter("BepInEx.Plugin.U-xyla.NoTankControls", "U-xyla.XyMod", "BepInEx.Plugin.art0007i.InspectorScroll", "me.art0007i.InspectorScroll")]
     public class MarioInputBlocker
     {
         private static bool? _lastBlocked;
@@ -213,27 +214,24 @@ public sealed class SM64ContextInputs : IDisposable
         {
             if (__instance.Slot.ActiveUser != __instance.LocalUser) return;
 
-            bool isIndex = __instance.Controller is IndexController;
-            if (isIndex && _cachedLocomotionModules?.FilterWorldElement() == null)
+            bool blocked = ShouldBlockInputs();
+            if (__instance.Controller is not IndexController)
+            {
+                __instance.Inputs.Axis.RegisterBlocks = blocked;
+                return;
+            }
+
+            if (_cachedLocomotionModules?.FilterWorldElement() == null)
             {
                 LocomotionController locomotionController = __instance.LocalUser.Root.GetRegisteredComponent<LocomotionController>();
                 _cachedLocomotionModules = locomotionController?.ActiveModule?.Slot?.Parent;
             }
 
-            bool blocked = ShouldBlockInputs();
-
             if (_lastBlocked.HasValue && blocked == _lastBlocked) return;
 
             _lastBlocked = blocked;
 
-            if (isIndex)
-            {
-                __instance.RunSynchronously(() => _cachedLocomotionModules?.ActiveSelf_Field.Value = !blocked);
-            }
-            else
-            {
-                __instance.Inputs.Axis.RegisterBlocks = blocked;
-            }
+            __instance.RunSynchronously(() => _cachedLocomotionModules?.ActiveSelf_Field.Value = !blocked);
 
             if (!blocked && !__instance.InputInterface.VR_Active && !(_cachedLocomotionModules?.ActiveSelf_Field.Value ?? false))
             {

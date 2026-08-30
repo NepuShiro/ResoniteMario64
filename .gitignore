@@ -432,3 +432,4 @@ dist/
 build/
 
 .idea/
+libsm64/*
